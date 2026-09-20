@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package dexon.agent.v1;
 
-option go_package = "github.com/anandrkskd/dexon/proto/agentv1;agentv1";
+option go_package = "github.com/anandrkskd/Dexon/proto/agentv1;agentv1";
 
 // FleetManager is the agent-facing service. Agents dial in and hold a
 // single long-lived bidirectional stream open for their entire lifetime.

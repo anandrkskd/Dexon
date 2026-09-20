@@ -7,7 +7,7 @@
 package fleetcontrolv1
 
 import (
-	agentv1 "github.com/anandrkskd/dexon/proto/agentv1"
+	agentv1 "github.com/anandrkskd/Dexon/proto/agentv1"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
@@ -419,7 +419,7 @@ const file_dexon_fleetcontrol_proto_rawDesc = "" +
 	"\fFleetControl\x12e\n" +
 	"\x11GetAvailableHosts\x12/.dexon.fleetcontrol.v1.GetAvailableHostsRequest\x1a\x1f.dexon.fleetcontrol.v1.HostList\x12[\n" +
 	"\bDispatch\x12&.dexon.fleetcontrol.v1.DispatchRequest\x1a'.dexon.fleetcontrol.v1.DispatchResponse\x12j\n" +
-	"\rRequestDelete\x12+.dexon.fleetcontrol.v1.RequestDeleteRequest\x1a,.dexon.fleetcontrol.v1.RequestDeleteResponseBAZ?github.com/anandrkskd/dexon/proto/fleetcontrolv1;fleetcontrolv1b\x06proto3"
+	"\rRequestDelete\x12+.dexon.fleetcontrol.v1.RequestDeleteRequest\x1a,.dexon.fleetcontrol.v1.RequestDeleteResponseBAZ?github.com/anandrkskd/Dexon/proto/fleetcontrolv1;fleetcontrolv1b\x06proto3"
 
 var (
 	file_dexon_fleetcontrol_proto_rawDescOnce sync.Once

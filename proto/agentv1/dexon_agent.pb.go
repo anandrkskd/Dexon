@@ -837,7 +837,7 @@ const file_dexon_agent_proto_rawDesc = "" +
 	"\n" +
 	"network_id\x18\x05 \x01(\tR\tnetworkId2Y\n" +
 	"\fFleetManager\x12I\n" +
-	"\aConnect\x12\x1c.dexon.agent.v1.AgentMessage\x1a\x1c.dexon.agent.v1.FleetCommand(\x010\x01B3Z1github.com/anandrkskd/dexon/proto/agentv1;agentv1b\x06proto3"
+	"\aConnect\x12\x1c.dexon.agent.v1.AgentMessage\x1a\x1c.dexon.agent.v1.FleetCommand(\x010\x01B3Z1github.com/anandrkskd/Dexon/proto/agentv1;agentv1b\x06proto3"
 
 var (
 	file_dexon_agent_proto_rawDescOnce sync.Once

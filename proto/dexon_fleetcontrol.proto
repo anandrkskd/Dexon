@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package dexon.fleetcontrol.v1;
 
-option go_package = "github.com/anandrkskd/dexon/proto/fleetcontrolv1;fleetcontrolv1";
+option go_package = "github.com/anandrkskd/Dexon/proto/fleetcontrolv1;fleetcontrolv1";
 
 import "dexon_agent.proto"; // reuses VMSpec, defined in dexon.agent.v1AAA
 

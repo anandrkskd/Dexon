@@ -5,8 +5,8 @@
 
 gen-proto:
 	protoc -I proto \
-		--go_out=. --go_opt=module=github.com/anandrkskd/dexon \
-		--go-grpc_out=. --go-grpc_opt=module=github.com/anandrkskd/dexon \
+		--go_out=. --go_opt=module=github.com/anandrkskd/Dexon \
+		--go-grpc_out=. --go-grpc_opt=module=github.com/anandrkskd/Dexon \
 		proto/dexon_agent.proto proto/dexon_fleetcontrol.proto
 
 gen-api:
