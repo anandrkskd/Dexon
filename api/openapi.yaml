@@ -1,0 +1,198 @@
+openapi: 3.0.3
+info:
+  title: Dexon API
+  description: >
+    Client-facing API for creating and managing VMs. Requests are handled
+    asynchronously by default -- this endpoint writes the request and
+    returns immediately; a background scheduler and per-host agents carry
+    out the actual provisioning. Clients that want to block until the VM
+    is ready can opt in with `wait=true` on creation.
+  version: "1.0"
+
+servers:
+  - url: https://api.dexon.internal/v1
+
+security:
+  - ApiKeyAuth: []
+
+paths:
+  /flavors:
+    get:
+      summary: List available VM flavors
+      operationId: listFlavors
+      responses:
+        "200":
+          description: Available flavors
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Flavor"
+
+  /vms:
+    post:
+      summary: Create a VM
+      operationId: createVM
+      parameters:
+        - name: wait
+          in: query
+          description: >
+            If true, hold the request open until the VM reaches a
+            terminal state (running or failed) or timeout elapses.
+            Defaults to false (return immediately).
+          schema:
+            type: boolean
+            default: false
+        - name: timeout
+          in: query
+          description: >
+            Max time to wait when wait=true (e.g. "60s"). Ignored
+            otherwise. If it elapses first, returns the current
+            (still-pending) status rather than an error.
+          schema:
+            type: string
+            default: "60s"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateVMRequest"
+      responses:
+        "202":
+          description: >
+            Request accepted. Status will be `pending` unless wait=true
+            resolved to a terminal state before returning.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VM"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/QuotaExceeded"
+
+    get:
+      summary: List VMs owned by the authenticated user
+      operationId: listVMs
+      parameters:
+        - name: status
+          in: query
+          description: Filter by lifecycle status
+          schema:
+            $ref: "#/components/schemas/VMStatus"
+      responses:
+        "200":
+          description: Matching VMs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/VM"
+
+  /vms/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+
+    get:
+      summary: Get VM status and details
+      operationId: getVM
+      responses:
+        "200":
+          description: VM details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VM"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+    delete:
+      summary: Destroy a VM
+      operationId: deleteVM
+      responses:
+        "202":
+          description: Delete accepted; VM transitions to `deleting`
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VM"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-Dexon-Api-Key
+
+  responses:
+    BadRequest:
+      description: Invalid request (e.g. unknown flavor)
+    NotFound:
+      description: No VM with that id for this user
+    QuotaExceeded:
+      description: Request would exceed the user's quota/SLA tier
+
+  schemas:
+    VMStatus:
+      type: string
+      enum: [pending, scheduled, provisioning, running, deleting, failed]
+
+    Flavor:
+      type: object
+      properties:
+        name:
+          type: string
+          example: medium
+        vcpus:
+          type: integer
+        memory_mb:
+          type: integer
+        disk_gb:
+          type: integer
+
+    CreateVMRequest:
+      type: object
+      required: [flavor, disk_image]
+      properties:
+        flavor:
+          type: string
+          description: Name of a server-defined flavor (see GET /flavors)
+          example: medium
+        disk_image:
+          type: string
+          description: Identifier of the base disk image to boot from
+        name:
+          type: string
+          description: Optional user-friendly label, not used for identity
+
+    VM:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        flavor:
+          type: string
+        status:
+          $ref: "#/components/schemas/VMStatus"
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        failure_reason:
+          type: string
+          description: Present only when status is `failed`
+      # Deliberately excludes host_id / placement info -- that's an
+      # internal Scheduler/Fleet manager concern, never leaked to clients.

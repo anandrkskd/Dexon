@@ -1,0 +1,105 @@
+syntax = "proto3";
+
+package dexon.agent.v1;
+
+option go_package = "github.com/anandrkskd/dexon/proto/agentv1;agentv1";
+
+// FleetManager is the agent-facing service. Agents dial in and hold a
+// single long-lived bidirectional stream open for their entire lifetime.
+// The agent never decides desired state -- it only reports what it
+// observes and executes commands it is given.
+service FleetManager {
+  // Connect is the one persistent stream per agent. The agent sends the
+  // first AgentMessage (Register) to open it; both sides then push
+  // messages independently for as long as the connection lives.
+  rpc Connect(stream AgentMessage) returns (stream FleetCommand);
+}
+
+// ---- Agent -> Fleet manager -------------------------------------------
+
+message AgentMessage {
+  string host_id = 1;
+
+  oneof payload {
+    RegisterHost register = 2;
+    Heartbeat heartbeat = 3;
+    MetricsReport metrics = 4;
+    DriftReport drift = 5;
+  }
+}
+
+// Sent once, immediately after the stream opens (and again after any
+// reconnect, since the fleet manager treats a reconnect as a new agent
+// session until it re-registers).
+message RegisterHost {
+  int32 cpu_cores = 1;
+  int64 memory_bytes = 2;
+  bool hyperthreading_enabled = 3;
+}
+
+// Cheap liveness signal. Absence of heartbeats within a timeout is how
+// the fleet manager detects a dead/unreachable host.
+message Heartbeat {
+  int64 unix_timestamp = 1;
+}
+
+// Streamed periodically. Carries per-VM and host-level resource usage.
+message MetricsReport {
+  HostMetrics host = 1;
+  repeated VMMetrics vms = 2;
+}
+
+message HostMetrics {
+  double cpu_percent = 1;
+  int64 memory_available_bytes = 2;
+}
+
+message VMMetrics {
+  string vm_id = 1;
+  double cpu_percent = 2;
+  int64 memory_bytes = 3;
+}
+
+// Sent when the agent's reconcile loop finds actual state (libvirt)
+// doesn't match cached desired state. The agent takes no corrective
+// action itself -- it only reports; the fleet manager decides the fix.
+message DriftReport {
+  repeated string missing_vm_ids = 1;   // desired but not running
+  repeated string unexpected_vm_ids = 2; // running but not desired
+}
+
+// ---- Fleet manager -> Agent --------------------------------------------
+
+message FleetCommand {
+  oneof payload {
+    DesiredStateSnapshot snapshot = 1;
+    CreateVM create_vm = 2;
+    DeleteVM delete_vm = 3;
+  }
+}
+
+// Full desired-state replace, not incremental. Sent right after a
+// successful RegisterHost, and again after any reconnect, so the
+// agent's cache can never silently miss a change made while disconnected.
+message DesiredStateSnapshot {
+  repeated VMSpec vms = 1;
+}
+
+// CreateVM/DeleteVM double as incremental desired-state updates: the
+// agent applies the change to its cache as part of executing the command,
+// so the cache and the executed action can never drift from each other.
+message CreateVM {
+  VMSpec vm = 1;
+}
+
+message DeleteVM {
+  string vm_id = 1;
+}
+
+message VMSpec {
+  string vm_id = 1;
+  int32 vcpus = 2;
+  int64 memory_bytes = 3;
+  string disk_image = 4;
+  string network_id = 5;
+}

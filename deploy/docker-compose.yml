@@ -1,0 +1,36 @@
+version: "3.8"
+
+# Local dev dependencies only. The four Dexon binaries themselves are
+# run as plain processes (`go run ./cmd/...`), not containers -- see
+# the design notes: the agent needs direct host/libvirt access, so
+# containerizing it would fight the design rather than help it. Keeping
+# all four binaries the same way (plain processes) for consistency.
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: dexon
+      POSTGRES_USER: dexon
+      POSTGRES_PASSWORD: dexon
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ../db/migrations:/docker-entrypoint-initdb.d
+
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    # TODO: write prometheus.yml once the /metrics endpoints exist on
+    # api, scheduler, and fleetmanager.
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+
+volumes:
+  pgdata:

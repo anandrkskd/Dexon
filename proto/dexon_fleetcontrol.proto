@@ -1,0 +1,72 @@
+syntax = "proto3";
+
+package dexon.fleetcontrol.v1;
+
+option go_package = "github.com/anandrkskd/dexon/proto/fleetcontrolv1;fleetcontrolv1";
+
+import "dexon_agent.proto"; // reuses VMSpec, defined in dexon.agent.v1AAA
+
+// FleetControl is Fleet manager's internal-facing service. Unlike the
+// agent-facing FleetManager service (long-lived stream, agent-initiated),
+// this is a plain request/response gRPC service with two callers:
+//   - Scheduler: GetAvailableHosts (placement input) and Dispatch
+//                (send a placement decision down to an agent).
+//   - API:       RequestDelete only -- no placement decision needed,
+//                so it skips the Scheduler entirely (see design notes).
+// Fleet manager remains the only writer of VM status regardless of
+// which of these two callers triggered the request.
+service FleetControl {
+  rpc GetAvailableHosts(GetAvailableHostsRequest) returns (HostList);
+  rpc Dispatch(DispatchRequest) returns (DispatchResponse);
+  rpc RequestDelete(RequestDeleteRequest) returns (RequestDeleteResponse);
+}
+
+// ---- Scheduler -> Fleet manager ------------------------------------------
+
+message GetAvailableHostsRequest {}
+
+message HostList {
+  repeated HostSummary hosts = 1;
+}
+
+message HostSummary {
+  string host_id = 1;
+  int32 cpu_cores = 2;
+  int64 memory_bytes = 3;
+  bool hyperthreading_enabled = 4;
+  int64 last_heartbeat_unix = 5;
+}
+
+// Scheduler has already made the placement decision; this just tells
+// Fleet manager where to send it. Fleet manager still validates the
+// host is still connected/available before forwarding -- a host can
+// go stale between GetAvailableHosts and Dispatch.
+message DispatchRequest {
+  string host_id = 1;
+  dexon.agent.v1.VMSpec vm = 2;
+}
+
+// Acknowledges only that Fleet manager accepted responsibility for the
+// command (host was reachable, command was sent). It does NOT mean the
+// VM is running yet -- that outcome arrives later via CommandResult on
+// the agent stream, and Fleet manager writes it to the DB from there.
+// The client learns the real outcome by polling GET /vms/{id}, not
+// through this RPC.
+message DispatchResponse {
+  bool accepted = 1;
+  string error_message = 2; // e.g. host disconnected between selection and dispatch
+}
+
+// ---- API -> Fleet manager -------------------------------------------------
+
+message RequestDeleteRequest {
+  string vm_id = 1;
+}
+
+// Same caveat as DispatchResponse: accepted means the delete was
+// relayed (or, if the VM had no host yet, marked deleted immediately).
+// It is not a guarantee the VM is gone -- poll GET /vms/{id} for that.
+message RequestDeleteResponse {
+  bool accepted = 1;
+  string error_message = 2;
+}
